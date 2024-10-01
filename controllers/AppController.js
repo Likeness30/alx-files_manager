@@ -1,44 +1,83 @@
-/**
- * AppController class representing the controller for the application.
- */
-import dbClient from '../utils/db';
-import HTTPError from '../utils/httpErrors';
-import redisClient from '../utils/redis';
+/* eslint-disable import/no-named-as-default */
+// eslint-disable-next-line import/no-unresolved, import/extensions
+import dbClient from '../../utils/db';
 
-/**
- * AppController class to handle application status and statistics.
- */
-class AppController {
-  /**
-   * Get the status of Redis and the database.
-   * @param {Object} req - The request object.
-   * @param {Object} res - The response object.
-   * @returns {Object} JSON response with the status of Redis and the database.
-   */
-  static async getStatus(req, res) {
-    try {
-      return res.status(200).json({ redis: redisClient.isAlive(), db: dbClient.isAlive() });
-    } catch (error) {
-      return HTTPError.internalServerError(res);
-    }
-  }
+describe('+ AppController', () => {
+  // eslint-disable-next-line no-undef, func-names
+  before(function (done) {
+    this.timeout(10000);
+    Promise.all([dbClient.usersCollection(), dbClient.filesCollection()])
+      .then(([usersCollection, filesCollection]) => {
+        Promise.all([usersCollection.deleteMany({}), filesCollection.deleteMany({})])
+          .then(() => done())
+          .catch((deleteErr) => done(deleteErr));
+      }).catch((connectErr) => done(connectErr));
+  });
 
-  /**
-   * Get the number of users and files in the database.
-   * @param {Object} req - The request object.
-   * @param {Object} res - The response object.
-   * @returns {Promise<Object>} JSON response with the number of users and files.
-   */
-  static async getStats(req, res) {
-    try {
-      return res
-        .status(200)
-        .json({ users: await dbClient.nbUsers(), files: await dbClient.nbFiles() });
-    } catch (error) {
-      console.log(`Error occurring here: ${error.message}`);
-      return HTTPError.internalServerError(res);
-    }
-  }
-}
+  describe('+ GET: /status', () => {
+    it('+ Services are online', () => new Promise((done) => {
+      // eslint-disable-next-line no-undef
+      request.get('/status')
+        .expect(200)
+        // eslint-disable-next-line consistent-return
+        .end((err, res) => {
+          if (err) {
+            return done(err);
+          }
+          // eslint-disable-next-line jest/valid-expect
+          expect(res.body).to.deep.eql({ redis: true, db: true });
+          done();
+        });
+    }));
+  });
 
-export default AppController;
+  describe('+ GET: /stats', () => {
+    it('+ Correct statistics about db collections', () => new Promise((done) => {
+      // eslint-disable-next-line no-undef
+      request.get('/stats')
+        .expect(200)
+        // eslint-disable-next-line consistent-return
+        .end((err, res) => {
+          if (err) {
+            return done(err);
+          }
+          // eslint-disable-next-line jest/valid-expect
+          expect(res.body).to.deep.eql({ users: 0, files: 0 });
+          done();
+        });
+    }));
+
+    // eslint-disable-next-line jest/prefer-expect-assertions, func-names
+    it('+ Correct statistics about db collections [alt]', function () {
+      // eslint-disable-next-line jest/no-test-return-statement
+      return new Promise((done) => {
+        this.timeout(10000);
+        Promise.all([dbClient.usersCollection(), dbClient.filesCollection()])
+          .then(([usersCollection, filesCollection]) => {
+            Promise.all([
+              usersCollection.insertMany([{ email: 'john@mail.com' }]),
+              filesCollection.insertMany([
+                { name: 'foo.txt', type: 'file' },
+                { name: 'pic.png', type: 'image' },
+              ]),
+            ])
+              .then(() => {
+                // eslint-disable-next-line no-undef
+                request.get('/stats')
+                  .expect(200)
+                  // eslint-disable-next-line consistent-return
+                  .end((err, res) => {
+                    if (err) {
+                      return done(err);
+                    }
+                    // eslint-disable-next-line jest/valid-expect
+                    expect(res.body).to.deep.eql({ users: 1, files: 2 });
+                    done();
+                  });
+              })
+              .catch((deleteErr) => done(deleteErr));
+          }).catch((connectErr) => done(connectErr));
+      });
+    });
+  });
+});
