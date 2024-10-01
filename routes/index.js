@@ -1,8 +1,12 @@
 import { Router } from 'express';
-import AppController from '../controllers/AppController';
-import UsersController from '../controllers/UsersController';
-import AuthController from '../controllers/AuthController';
-import FilesController from '../controllers/FilesController';
+// eslint-disable-next-line import/extensions
+import AppController from '../controllers/AppController.js';
+// eslint-disable-next-line import/extensions
+import UsersController from '../controllers/UsersController.js';
+// eslint-disable-next-line import/no-unresolved, import/extensions
+import AuthController from '../controllers/AuthController.js';
+// eslint-disable-next-line import/extensions
+import FilesController from '../controllers/FilesController.js';
 
 const router = Router();
 
@@ -30,4 +34,4 @@ router.put('/files/:id/unpublish', FilesController.putUnpublish);
 
 router.get('/files/:id/data', FilesController.getFile);
 
-module.exports = router;
+export default router;
